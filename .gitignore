@@ -1,0 +1,27 @@
+# Docker
+*.log
+*.pid
+*.pid.lock
+
+# Data volumes (не коммитим данные контейнеров)
+pg_data/
+prom_data/
+grafana_data/
+elasticsearch_data/
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Secrets (никогда не коммитить!)
+.env
+*.key
+*.pem
+*.crt
