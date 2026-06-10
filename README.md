@@ -1,22 +1,31 @@
-# Observability Lab
+## Project Purpose
 
-Стенд для отработки навыков:
-- SQL (PostgreSQL)
-- Monitoring (Prometheus + Grafana)
-- Logging (ELK stack)
-- Containerization (Docker Compose)
-- Version control (Git)
+This project demonstrates production-grade observability skills:
+- **Metrics**: Prometheus + Grafana
+- **Logs**: ELK Stack (Elasticsearch, Logstash, Kibana)
+- **Database**: PostgreSQL with performance monitoring
+- **Alerting**: Alertmanager
+- **Infrastructure**: Docker Compose, Linux, Bash
 
-## Быстрый старт
+## Sills Demonstrated
 
-```bash
-docker-compose up -d
-```
+| Category | Technologies |
+|----------|--------------|
+| Containerization | Docker, Docker Compose |
+| Monitoring | Prometheus, PromQL, Grafana |
+| Logging | Elasticsearch, Logstash, Kibana |
+| Database | PostgreSQL, SQL (DDL/DML) |
+| Alerting | Alertmanager |
+| Automation | Makefile, Bash scripts |
+| Version Control | Git, GitHub |
 
-## Доступ к сервисам
+## Access Points
 
-| Сервис | URL | Логин/Пароль |
-|--------|-----|--------------|
+| Service | URL | Credentials |
+|---------|-----|-------------|
 | Grafana | http://localhost:3000 | admin/admin |
 | Prometheus | http://localhost:9090 | - |
+| Kibana | http://localhost:5601 | - |
+| Elasticsearch | http://localhost:9200 | - |
 | PostgreSQL | localhost:5432 | admin/secret |
+| Alertmanager | http://localhost:9093 | - |
