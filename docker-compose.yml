@@ -68,6 +68,91 @@ services:
     networks:
       - observability-net
 
+  # ========== ELK STACK ==========
+  elasticsearch:
+    image: docker-elk-elasticsearch:latest
+    container_name: observability-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - xpack.security.enabled=false
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - observability-net
+
+  logstash:
+    image: docker-elk-logstash:latest
+    container_name: observability-logstash
+    ports:
+      - "5000:5000"
+      - "5044:5044"
+      - "9600:9600"
+    volumes:
+      - ./configs/logstash/logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+    depends_on:
+      - elasticsearch
+    networks:
+      - observability-net
+
+  kibana:
+    image: docker-elk-kibana:latest
+    container_name: observability-kibana
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    depends_on:
+      - elasticsearch
+    networks:
+      - observability-net
+
+  filebeat:
+    image: elastic/filebeat:8.11.0
+    container_name: observability-filebeat
+    user: root
+    volumes:
+      - ./configs/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command: filebeat -e -strict.perms=false
+    depends_on:
+      - logstash
+    networks:
+      - observability-net
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: observability-node-exporter
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/rootfs'
+    networks:
+      - observability-net
+
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: observability-alertmanager
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./configs/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+    networks:
+      - observability-net
+
 networks:
   observability-net:
     driver: bridge
@@ -76,3 +161,4 @@ volumes:
   pg_data:
   prom_data:
   grafana_data:
+  elasticsearch_data:
