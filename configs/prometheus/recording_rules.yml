@@ -1,0 +1,26 @@
+groups:
+  - name: recording_rules_postgres
+    interval: 30s
+    rules:
+      # Среднее количество подключений за 5 минут
+      - record: postgres:avg_connections_5m
+        expr: avg_over_time(pg_stat_database_numbackends{datname="appdb"}[5m])
+
+      # Общее количество транзакций в секунду
+      - record: postgres:total_tx_per_second
+        expr: sum(rate(pg_stat_database_xact_commit{datname="appdb"}[1m]))
+
+      # Среднее время выполнения запросов
+      - record: postgres:avg_query_time_5m
+        expr: avg_over_time(pg_stat_statements_mean_time_ms[5m])
+
+  - name: recording_rules_system
+    interval: 30s
+    rules:
+      # Средняя загрузка CPU за 1 час
+      - record: system:cpu_avg_1h
+        expr: avg_over_time((100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100))[1h:5m])
+
+      # Доступное место на диске в GB
+      - record: system:free_disk_gb
+        expr: node_filesystem_avail_bytes{mountpoint="/"} / 1024 / 1024 / 1024
