@@ -1,0 +1,184 @@
+groups:
+  # PostgreSQL alerts
+  - name: database_alerts
+    interval: 30s
+    rules:
+      - alert: PostgreSQLDown
+        expr: pg_up == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: postgres
+          team: backend
+        annotations:
+          summary: "PostgreSQL is DOWN on {{ $labels.instance }}"
+          description: |
+            PostgreSQL instance has been unreachable for more than 1 minute.
+            Immediate action required!
+            Check: docker logs observability-postgres
+            Runbook: https://wiki.company.com/postgres/incidents
+
+      - alert: PostgreSQLTooManyConnections
+        expr: pg_stat_database_numbackends{datname="appdb"} > 20
+        for: 2m
+        labels:
+          severity: warning
+          service: postgres
+          team: backend
+        annotations:
+          summary: "oo many connections to PostgreSQL"
+          description: |
+            Database {{ $labels.datname }} has {{ $value }} active connections.
+            Threshold: 20
+            Check: SELECT * FROM pg_stat_activity;
+            Runbook: https://wiki.company.com/postgres/connections
+
+      - alert: PostgreSQLSlowQueries
+        expr: pg_stat_statements_mean_time_ms > 1000
+        for: 5m
+        labels:
+          severity: warning
+          service: postgres
+          team: backend
+        annotations:
+          summary: "Slow queries detected in PostgreSQL"
+          description: |
+            Average query execution time is {{ $value }}ms (threshold: 1000ms)
+            Check: SELECT * FROM pg_stat_statements ORDER BY mean_time_ms DESC;
+            Runbook: https://wiki.company.com/postgres/slow-queries
+
+      - alert: PostgreSQLLockTimeout
+        expr: rate(pg_stat_database_deadlocks{datname="appdb"}[5m]) > 0
+        for: 2m
+        labels:
+          severity: critical
+          service: postgres
+          team: backend
+        annotations:
+          summary: "Deadlocks detected in PostgreSQL"
+          description: |
+            Deadlocks are happening in database {{ $labels.datname }}
+            Check: SHOW ALL; | grep lock_timeout
+            Runbook: https://wiki.company.com/postgres/deadlocks
+
+  # System alerts (Node Exporter)
+  - name: system_alerts
+    interval: 30s
+    rules:
+      - alert: HighCPUUsage
+        expr: 100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: node
+          team: infrastructure
+        annotations:
+          summary: "High CPU usage on {{ $labels.instance }}"
+          description: |
+            CPU usage is {{ $value }}% (threshold: 80%)
+            Check: top -o %CPU
+            Runbook: https://wiki.company.com/infra/cpu
+
+      - alert: LowMemory
+        expr: (node_memory_MemTotal_bytes - node_memory_MemFree_bytes - node_memory_Cached_bytes) / node_memory_MemTotal_bytes * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+          service: node
+          team: infrastructure
+        annotations:
+          summary: "Low memory on {{ $labels.instance }}"
+          description: |
+            Memory usage is {{ $value }}% (threshold: 90%)
+            Check: free -h; top -o %MEM
+            Runbook: https://wiki.company.com/infra/memory
+
+      - alert: LowDiskSpace
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 < 15
+        for: 5m
+        labels:
+          severity: critical
+          service: node
+          team: infrastructure
+        annotations:
+          summary: "Low disk space on {{ $labels.instance }}"
+          description: |
+            Only {{ $value }}% free space left on root partition.
+            Check: df -h
+            Runbook: https://wiki.company.com/infra/disk
+
+      - alert: HighNetworkTraffic
+        expr: rate(node_network_receive_bytes_total[5m]) > 100 * 1024 * 1024
+        for: 5m
+        labels:
+          severity: warning
+          service: node
+          team: infrastructure
+        annotations:
+          summary: "High network traffic on {{ $labels.instance }}"
+          description: |
+            Network receive rate is {{ $value }} bytes/s (threshold: 100MB/s)
+            Check: iftop
+            Runbook: https://wiki.company.com/infra/network
+
+  # Elasticsearch alerts
+  - name: elasticsearch_alerts
+    interval: 30s
+    rules:
+      - alert: ElasticsearchDown
+        expr: elasticsearch_cluster_health_status == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: elasticsearch
+          team: logging
+        annotations:
+          summary: "Elasticsearch is DOWN"
+          description: |
+            Elasticsearch cluster is not healthy.
+            Check: docker logs observability-elasticsearch
+            Runbook: https://wiki.company.com/elasticsearch/incidents
+
+      - alert: ElasticsearchHighHeapUsage
+        expr: (elasticsearch_jvm_memory_used_bytes / elasticsearch_jvm_memory_max_bytes) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+          service: elasticsearch
+          team: logging
+        annotations:
+          summary: "High JVM heap usage in Elasticsearch"
+          description: |
+            Heap usage is {{ $value }}% (threshold: 85%)
+            Check: docker stats observability-elasticsearch
+            Runbook: https://wiki.company.com/elasticsearch/heap
+
+  # Application alerts
+  - name: application_alerts
+    interval: 30s
+    rules:
+      - alert: NoDataForJob
+        expr: absent(up{job="postgres-exporter"})
+        for: 2m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "No data from {{ $labels.job }}"
+          description: |
+            No metrics are coming from {{ $labels.job }}.
+            Check if the exporter is running.
+            Command: docker ps | grep exporter
+
+      - alert: TargetDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: infrastructure
+        annotations:
+          summary: "Target {{ $labels.job }} is DOWN"
+          description: |
+            Target {{ $labels.job }} ({{ $labels.instance }}) is unreachable.
+            Check: curl {{ $labels.instance }}:9187/metrics
+            Runbook: https://wiki.company.com/infra/targets
