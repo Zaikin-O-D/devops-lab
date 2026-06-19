@@ -61,7 +61,6 @@ scrape_configs:
     scrape_timeout: 15s
     static_configs:
       - targets: ['postgres-exporter:9187']
-    metrics_path: '/metrics'
     params:
       collect[]:
         - pg_stat_statements
